@@ -1,38 +1,112 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Serverless Hello World API
+Description: Serverless Intermediate Web Application
 
 Globals:
   Function:
     Runtime: nodejs8.10
-    Timeout: 3
-  Api:
-    Cors:
+
+Resources:
+  ApiGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      EndpointConfiguration: REGIONAL
+      Cors:
         AllowMethods: "'*'"
         AllowHeaders: "'*'"
         AllowOrigin: "'*'"
 
-Resources:
-  HelloWorldFunction:
-    Type: AWS::Serverless::Function 
+  GetBasePathFunction:
+    Type: AWS::Serverless::Function
     Properties:
-      Handler: index.handleHelloWorld
+      MemorySize: 128
+      Timeout: 3
+      Handler: index.handleGetBasePath
       Events:
-        HelloWorld:
+        GetBasePath:
           Type: Api
           Properties:
-            Path: /hello
-            Method: get
+            RestApiId: !Ref ApiGateway
+            Path: /
+            Method: GET
+
+  QueryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      MemorySize: 128
+      Timeout: 3
+      Handler: index.handleQuery
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref Store
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref Store
+      Events:
+        FindObjects:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /classes/{className}
+            Method: GET
+        ReadObject:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /classes/{className}/{objectId}
+            Method: GET
+
+  WriteFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      MemorySize: 128
+      Timeout: 3
+      Handler: index.handleWrite
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Store
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref Store
+      Events:
+        CreateObject:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /classes/{className}
+            Method: POST
+        UpdateObject:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /classes/{className}/{objectId}
+            Method: PUT
+        DeleteObject:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /classes/{className}/{objectId}
+            Method: DELETE
+
+  Store:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      KeySchema:
+        - AttributeName: 'objectId'
+          KeyType: 'HASH'
+      AttributeDefinitions:
+        - AttributeName: 'objectId'
+          AttributeType: 'S'
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
 
 Outputs:
-  HelloWorldApi:
-    Description: 'API Gateway endpoint URL for Prod stage for Hello World function'
-    Value: !Sub 'https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/'
+  ApiId:
+    Description: 'API Gateway Id'
+    Value: !Ref ApiGateway
 
-  HelloWorldFunction:
-    Description: 'Hello World Lambda Function ARN'
-    Value: !GetAtt HelloWorldFunction.Arn
-
-  HelloWorldFunctionIamRole:
-    Description: 'Implicit IAM Role created for Hello World function'
-    Value: !GetAtt HelloWorldFunctionRole.Arn
+  ApiUrl:
+    Description: 'API Gateway endpoint URL for Prod stage'
+    Value: !Sub 'https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/Prod/'
