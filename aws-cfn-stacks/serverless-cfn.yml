@@ -222,6 +222,55 @@ Resources:
             Path: /classes/{className}/{objectId}
             Method: DELETE
 
+  FileUploadUrlFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      MemorySize: 128
+      Timeout: 3
+      Handler: index.handleGetUploadUrl
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref FilesBucket
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref FilesBucket
+      Events:
+        FileUploadUrl:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /classes/{className}/{objectId}/files/{fileName}
+            Method: GET
+  
+  FilesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: PublicRead
+      CorsConfiguration:
+        CorsRules:
+          - AllowedMethods:
+              - GET
+              - PUT
+              - POST
+              - HEAD
+            AllowedOrigins:
+              - '*'
+            AllowedHeaders:
+              - '*'
+              
+  FilesBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref FilesBucket
+      PolicyDocument:
+        Statement:
+          - Sid: PublicGetObject
+            Effect: 'Allow'
+            Principal: '*'
+            Action:
+              - 's3:GetObject'
+            Resource: !Sub 'arn:aws:s3:::${FilesBucket}/*'
+
   Store:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -251,3 +300,7 @@ Outputs:
   UserPoolClientId:
     Description: 'User Pool Client Id'
     Value: !Ref UserPoolClient
+  
+  FilesBucket:
+    Description: 'Files Bucket Id'
+    Value: !Ref FilesBucket
