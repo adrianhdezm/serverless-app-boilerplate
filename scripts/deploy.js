@@ -14,7 +14,7 @@ const { CFN_PACKAGE_STACK_PATH } = paths;
 		console.log(chalk.yellow('\nDeploying the stack ...'.toUpperCase()));
 		const stackName = getProjectName();
 		const { stdout } = await exec(
-			`sam deploy --template-file ${CFN_PACKAGE_STACK_PATH} --stack-name ${stackName} --capabilities CAPABILITY_IAM`
+			`sam deploy --template-file ${CFN_PACKAGE_STACK_PATH} --stack-name ${stackName} --capabilities CAPABILITY_NAMED_IAM`
 		);
 		console.log(chalk.green(stdout));
 	} catch (error) {

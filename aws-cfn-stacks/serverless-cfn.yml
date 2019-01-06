@@ -7,6 +7,132 @@ Globals:
     Runtime: nodejs8.10
 
 Resources:
+  LambdaForCloudFormation:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: LambdaForCloudFormation
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          -
+            Effect: Allow
+            Action: 'sts:AssumeRole'
+            Principal:
+              Service: lambda.amazonaws.com
+      Policies:
+        -
+          PolicyName: WriteCloudWatchLogs
+          PolicyDocument: 
+            Version: '2012-10-17'
+            Statement: 
+              -
+                Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: 'arn:aws:logs:*:*:*'
+        -
+          PolicyName: UpdateUserPoolClient
+          PolicyDocument: 
+            Version: '2012-10-17'
+            Statement: 
+              -
+                Effect: Allow
+                Action: 'cognito-idp:UpdateUserPoolClient'
+                Resource: 'arn:aws:cognito-idp:*:*:userpool/*'
+        -
+          PolicyName: CreateFirstUserPoolUser
+          PolicyDocument: 
+            Version: '2012-10-17'
+            Statement: 
+              -
+                Effect: Allow
+                Action: 'cognito-idp:SignUp'
+                Resource: 'arn:aws:cognito-idp:*:*:userpool/*'
+
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      LambdaConfig:
+        PreSignUp: !GetAtt PreSignupLambdaFunction.Arn
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+      UsernameAttributes:
+        - email
+      Schema:
+        - AttributeDataType: String
+          Name: email
+          Required: false
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref UserPool
+      GenerateSecret: false
+
+  UserPoolClientSettings:
+    Type: 'Custom::UserPoolClientSettings'
+    Properties:
+      ServiceToken: !GetAtt UserPoolClientSettingsFunction.Arn
+      UserPoolId: !Ref UserPool
+      UserPoolClientId: !Ref UserPoolClient
+      SupportedIdentityProviders:
+        - COGNITO
+      CallbackURL: !Sub 'https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/Prod/'
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows:
+        - code
+        - implicit
+      AllowedOAuthScopes:
+        - openid
+        - email
+      ExplicitAuthFlows:
+        - USER_PASSWORD_AUTH 
+  
+  UserPoolClientSettingsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      MemorySize: 128
+      Timeout: 3
+      Handler: index.handleUserPoolClientSettings
+      Role: !GetAtt LambdaForCloudFormation.Arn
+
+  UserPoolFirstUser:
+    Type: 'Custom::UserPoolFirstUser'
+    DependsOn: 
+      - UserPoolClientSettings
+    Properties:
+      ServiceToken: !GetAtt UserPoolFirstUserFunction.Arn
+      ClientId: !Ref UserPoolClient
+      Username: 'max.mustermann@test.de'
+      Password: '1234qwer'
+
+  UserPoolFirstUserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      MemorySize: 128
+      Timeout: 3
+      Handler: index.handleCreateFirstUser
+      Role: !GetAtt LambdaForCloudFormation.Arn
+  
+
+  LambdaUserPoolExecutionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt PreSignupLambdaFunction.Arn
+      Principal: cognito-idp.amazonaws.com
+      SourceArn: !Sub 'arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPool}'
+
+  PreSignupLambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      MemorySize: 128
+      Timeout: 3
+      Handler: index.handleCognitoPreSignup
+
   ApiGateway:
     Type: AWS::Serverless::Api
     Properties:
@@ -16,6 +142,11 @@ Resources:
         AllowMethods: "'*'"
         AllowHeaders: "'*'"
         AllowOrigin: "'*'"
+      Auth:
+        DefaultAuthorizer: CognitoAuthorizer
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn: !GetAtt UserPool.Arn
 
   GetBasePathFunction:
     Type: AWS::Serverless::Function
@@ -30,6 +161,8 @@ Resources:
             RestApiId: !Ref ApiGateway
             Path: /
             Method: GET
+            Auth:
+              Authorizer: NONE
 
   QueryFunction:
     Type: AWS::Serverless::Function
@@ -110,3 +243,11 @@ Outputs:
   ApiUrl:
     Description: 'API Gateway endpoint URL for Prod stage'
     Value: !Sub 'https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/Prod/'
+
+  UserPoolId:
+    Description: 'User Pool Id'
+    Value: !Ref UserPool
+
+  UserPoolClientId:
+    Description: 'User Pool Client Id'
+    Value: !Ref UserPoolClient
