@@ -6,6 +6,9 @@ export * from './classes';
 // Config Functions
 export * from './config';
 
+// Files Functions
+export * from './files';
+
 // Base Path
 export async function handleGetBasePath() {
 	return createAPIResponse(
