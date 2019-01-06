@@ -51,7 +51,7 @@ Resources:
                 Action: 'cognito-idp:SignUp'
                 Resource: 'arn:aws:cognito-idp:*:*:userpool/*'
 
-  CognitoUserPool:
+  UserPool:
     Type: AWS::Cognito::UserPool
     Properties:
       LambdaConfig:
@@ -66,18 +66,18 @@ Resources:
           Name: email
           Required: false
 
-  CognitoUserPoolClient:
+  UserPoolClient:
     Type: AWS::Cognito::UserPoolClient
     Properties:
-      UserPoolId: !Ref CognitoUserPool
+      UserPoolId: !Ref UserPool
       GenerateSecret: false
 
-  CognitoUserPoolClientSettings:
-    Type: 'Custom::CognitoUserPoolClientSettings'
+  UserPoolClientSettings:
+    Type: 'Custom::UserPoolClientSettings'
     Properties:
       ServiceToken: !GetAtt UserPoolClientSettingsFunction.Arn
-      UserPoolId: !Ref CognitoUserPool
-      UserPoolClientId: !Ref CognitoUserPoolClient
+      UserPoolId: !Ref UserPool
+      UserPoolClientId: !Ref UserPoolClient
       SupportedIdentityProviders:
         - COGNITO
       CallbackURL: !Sub 'https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/Prod/'
@@ -99,13 +99,13 @@ Resources:
       Handler: index.handleUserPoolClientSettings
       Role: !GetAtt LambdaForCloudFormation.Arn
 
-  CognitoUserPoolFirstUser:
-    Type: 'Custom::CognitoUserPoolFirstUser'
+  UserPoolFirstUser:
+    Type: 'Custom::UserPoolFirstUser'
     DependsOn: 
-      - CognitoUserPoolClientSettings
+      - UserPoolClientSettings
     Properties:
       ServiceToken: !GetAtt UserPoolFirstUserFunction.Arn
-      ClientId: !Ref CognitoUserPoolClient
+      ClientId: !Ref UserPoolClient
       Username: 'max.mustermann@test.de'
       Password: '1234qwer'
 
@@ -118,13 +118,13 @@ Resources:
       Role: !GetAtt LambdaForCloudFormation.Arn
   
 
-  LambdaCognitoUserPoolExecutionPermission:
+  LambdaUserPoolExecutionPermission:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
       FunctionName: !GetAtt PreSignupLambdaFunction.Arn
       Principal: cognito-idp.amazonaws.com
-      SourceArn: !Sub 'arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${CognitoUserPool}'
+      SourceArn: !Sub 'arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPool}'
 
   PreSignupLambdaFunction:
     Type: AWS::Serverless::Function
@@ -146,7 +146,7 @@ Resources:
         DefaultAuthorizer: CognitoAuthorizer
         Authorizers:
           CognitoAuthorizer:
-            UserPoolArn: !GetAtt CognitoUserPool.Arn
+            UserPoolArn: !GetAtt UserPool.Arn
 
   GetBasePathFunction:
     Type: AWS::Serverless::Function
@@ -244,10 +244,10 @@ Outputs:
     Description: 'API Gateway endpoint URL for Prod stage'
     Value: !Sub 'https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/Prod/'
 
-  CognitoUserPoolId:
-    Description: 'Cognito User Pool Id'
-    Value: !Ref CognitoUserPool
+  UserPoolId:
+    Description: 'User Pool Id'
+    Value: !Ref UserPool
 
-  CognitoUserPoolClientId:
-    Description: 'Cognito User Pool Client Id'
-    Value: !Ref CognitoUserPoolClient
+  UserPoolClientId:
+    Description: 'User Pool Client Id'
+    Value: !Ref UserPoolClient
