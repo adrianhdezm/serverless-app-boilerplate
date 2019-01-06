@@ -59,3 +59,45 @@ export async function handleUserPoolClientSettings(
 		throw error;
 	}
 }
+
+export async function handleCreateFirstUser(
+	event: AWSLambda.CloudFormationCustomResourceEvent,
+	context: AWSLambda.Context
+) {
+	try {
+		switch (event.RequestType) {
+			case 'Create':
+			case 'Update':
+				const cognitoIdentityServiceProvider = new CognitoIdentityServiceProvider();
+
+				const data = await cognitoIdentityServiceProvider
+					.signUp({
+						ClientId: event.ResourceProperties.ClientId,
+						Password: event.ResourceProperties.Password,
+						Username: event.ResourceProperties.Username
+					})
+					.promise();
+
+				const updateResponce = await cloudFormationRequest(
+					event,
+					context,
+					'SUCCESS',
+					data
+				);
+				return updateResponce;
+
+			case 'Delete':
+				const deleteResponce = await cloudFormationRequest(
+					event,
+					context,
+					'SUCCESS'
+				);
+				return deleteResponce;
+			default:
+				throw new Error('RequestType not supported');
+		}
+	} catch (error) {
+		await cloudFormationRequest(event, context, 'FAILED', {}, error);
+		throw error;
+	}
+}

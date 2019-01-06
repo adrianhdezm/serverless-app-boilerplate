@@ -41,6 +41,15 @@ Resources:
                 Effect: Allow
                 Action: 'cognito-idp:UpdateUserPoolClient'
                 Resource: 'arn:aws:cognito-idp:*:*:userpool/*'
+        -
+          PolicyName: CreateFirstUserPoolUser
+          PolicyDocument: 
+            Version: '2012-10-17'
+            Statement: 
+              -
+                Effect: Allow
+                Action: 'cognito-idp:SignUp'
+                Resource: 'arn:aws:cognito-idp:*:*:userpool/*'
 
   CognitoUserPool:
     Type: AWS::Cognito::UserPool
@@ -80,7 +89,7 @@ Resources:
         - openid
         - email
       ExplicitAuthFlows:
-        - USER_PASSWORD_AUTH   
+        - USER_PASSWORD_AUTH 
   
   UserPoolClientSettingsFunction:
     Type: AWS::Serverless::Function
@@ -89,6 +98,25 @@ Resources:
       Timeout: 3
       Handler: index.handleUserPoolClientSettings
       Role: !GetAtt LambdaForCloudFormation.Arn
+
+  CognitoUserPoolFirstUser:
+    Type: 'Custom::CognitoUserPoolFirstUser'
+    DependsOn: 
+      - CognitoUserPoolClientSettings
+    Properties:
+      ServiceToken: !GetAtt UserPoolFirstUserFunction.Arn
+      ClientId: !Ref CognitoUserPoolClient
+      Username: 'max.mustermann@test.de'
+      Password: '1234qwer'
+
+  UserPoolFirstUserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      MemorySize: 128
+      Timeout: 3
+      Handler: index.handleCreateFirstUser
+      Role: !GetAtt LambdaForCloudFormation.Arn
+  
 
   LambdaCognitoUserPoolExecutionPermission:
     Type: AWS::Lambda::Permission
