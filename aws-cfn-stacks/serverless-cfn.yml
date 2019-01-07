@@ -14,40 +14,33 @@ Resources:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
-          -
-            Effect: Allow
+          - Effect: Allow
             Action: 'sts:AssumeRole'
             Principal:
               Service: lambda.amazonaws.com
       Policies:
-        -
-          PolicyName: WriteCloudWatchLogs
-          PolicyDocument: 
+        - PolicyName: WriteCloudWatchLogs
+          PolicyDocument:
             Version: '2012-10-17'
-            Statement: 
-              -
-                Effect: Allow
+            Statement:
+              - Effect: Allow
                 Action:
                   - 'logs:CreateLogGroup'
                   - 'logs:CreateLogStream'
                   - 'logs:PutLogEvents'
                 Resource: 'arn:aws:logs:*:*:*'
-        -
-          PolicyName: UpdateUserPoolClient
-          PolicyDocument: 
+        - PolicyName: UpdateUserPoolClient
+          PolicyDocument:
             Version: '2012-10-17'
-            Statement: 
-              -
-                Effect: Allow
+            Statement:
+              - Effect: Allow
                 Action: 'cognito-idp:UpdateUserPoolClient'
                 Resource: 'arn:aws:cognito-idp:*:*:userpool/*'
-        -
-          PolicyName: CreateFirstUserPoolUser
-          PolicyDocument: 
+        - PolicyName: CreateFirstUserPoolUser
+          PolicyDocument:
             Version: '2012-10-17'
-            Statement: 
-              -
-                Effect: Allow
+            Statement:
+              - Effect: Allow
                 Action: 'cognito-idp:SignUp'
                 Resource: 'arn:aws:cognito-idp:*:*:userpool/*'
 
@@ -89,8 +82,8 @@ Resources:
         - openid
         - email
       ExplicitAuthFlows:
-        - USER_PASSWORD_AUTH 
-  
+        - USER_PASSWORD_AUTH
+
   UserPoolClientSettingsFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -101,7 +94,7 @@ Resources:
 
   UserPoolFirstUser:
     Type: 'Custom::UserPoolFirstUser'
-    DependsOn: 
+    DependsOn:
       - UserPoolClientSettings
     Properties:
       ServiceToken: !GetAtt UserPoolFirstUserFunction.Arn
@@ -116,7 +109,6 @@ Resources:
       Timeout: 3
       Handler: index.handleCreateFirstUser
       Role: !GetAtt LambdaForCloudFormation.Arn
-  
 
   LambdaUserPoolExecutionPermission:
     Type: AWS::Lambda::Permission
@@ -241,7 +233,7 @@ Resources:
             RestApiId: !Ref ApiGateway
             Path: /classes/{className}/{objectId}/files/{fileName}
             Method: GET
-  
+
   FilesBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -257,12 +249,13 @@ Resources:
               - '*'
             AllowedHeaders:
               - '*'
-              
+
   FilesBucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
       Bucket: !Ref FilesBucket
       PolicyDocument:
+        Version: '2012-10-17'
         Statement:
           - Sid: PublicGetObject
             Effect: 'Allow'
@@ -283,35 +276,36 @@ Resources:
       ProvisionedThroughput:
         ReadCapacityUnits: 1
         WriteCapacityUnits: 1
-  
+
   StaticAssetsBucket:
     Type: AWS::S3::Bucket
     Properties:
       AccessControl: PublicRead
       WebsiteConfiguration:
         IndexDocument: 'index.html'
-        
+
   StaticAssetsBucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
       Bucket: !Ref StaticAssetsBucket
       PolicyDocument:
+        Version: '2012-10-17'
         Statement:
           - Sid: CloudFrontOriginGetObject
             Effect: 'Allow'
-            Principal: 
+            Principal:
               CanonicalUser: !GetAtt CloudFrontOriginAccessIdentity.S3CanonicalUserId
             Action:
               - 's3:GetObject'
             Resource: !Sub 'arn:aws:s3:::${StaticAssetsBucket}/*'
           - Sid: PublicOriginGetObject
             Effect: 'Deny'
-            NotPrincipal: 
+            NotPrincipal:
               CanonicalUser: !GetAtt CloudFrontOriginAccessIdentity.S3CanonicalUserId
             Action:
               - 's3:GetObject'
             Resource: !Sub 'arn:aws:s3:::${StaticAssetsBucket}/*'
-            
+
   CloudFrontOriginAccessIdentity:
     Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
     Properties:
@@ -327,7 +321,7 @@ Resources:
         HttpVersion: http2
         Enabled: true
         PriceClass: 'PriceClass_100'
-        ViewerCertificate: 
+        ViewerCertificate:
           CloudFrontDefaultCertificate: true
         Origins:
           - Id: !Sub 'S3-${StaticAssetsBucket}'
@@ -368,15 +362,15 @@ Outputs:
   UserPoolClientId:
     Description: 'User Pool Client Id'
     Value: !Ref UserPoolClient
-  
+
   FilesBucket:
     Description: 'Files Bucket Id'
     Value: !Ref FilesBucket
-  
+
   StaticAssetsBucket:
     Description: 'Static Assets Bucket Id'
     Value: !Ref StaticAssetsBucket
-  
+
   StaticAssetsDistribution:
     Description: 'Static Assets Url'
     Value: !Sub 'https://${StaticAssetsDistribution.DomainName}'
