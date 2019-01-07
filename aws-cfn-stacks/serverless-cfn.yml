@@ -304,6 +304,13 @@ Resources:
             Action:
               - 's3:GetObject'
             Resource: !Sub 'arn:aws:s3:::${StaticAssetsBucket}/*'
+          - Sid: PublicOriginGetObject
+            Effect: 'Deny'
+            NotPrincipal: 
+              CanonicalUser: !GetAtt CloudFrontOriginAccessIdentity.S3CanonicalUserId
+            Action:
+              - 's3:GetObject'
+            Resource: !Sub 'arn:aws:s3:::${StaticAssetsBucket}/*'
             
   CloudFrontOriginAccessIdentity:
     Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
