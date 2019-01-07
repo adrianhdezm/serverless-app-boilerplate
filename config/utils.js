@@ -31,7 +31,7 @@ const checkStackExists = async stackName => {
 };
 exports.checkStackExists = checkStackExists;
 
-const getFilesBucketName = async stackName => {
+const getStackBucketName = async (stackName, resourceKey ) => {
 	const stacksResponce = await exec(
 		`aws cloudformation describe-stacks --stack-name ${stackName}`
 	);
@@ -39,12 +39,13 @@ const getFilesBucketName = async stackName => {
 	const [{ Outputs }] = JSON.parse(stacksResponce.stdout).Stacks;
 
 	const [filesBucketOutput] = Outputs.filter(
-		output => output.OutputKey === 'FilesBucket'
+		output => output.OutputKey === resourceKey
 	);
 
 	return filesBucketOutput.OutputValue;
 };
-exports.getFilesBucketName = getFilesBucketName;
+exports.getStackBucketName = getStackBucketName;
+
 
 // Check if the bucket already exists
 const checkBucketExists = async bucketName => {
