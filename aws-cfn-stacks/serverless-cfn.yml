@@ -283,6 +283,67 @@ Resources:
       ProvisionedThroughput:
         ReadCapacityUnits: 1
         WriteCapacityUnits: 1
+  
+  StaticAssetsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: PublicRead
+      WebsiteConfiguration:
+        IndexDocument: 'index.html'
+        
+  StaticAssetsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref StaticAssetsBucket
+      PolicyDocument:
+        Statement:
+          - Sid: CloudFrontOriginGetObject
+            Effect: 'Allow'
+            Principal: 
+              CanonicalUser: !GetAtt CloudFrontOriginAccessIdentity.S3CanonicalUserId
+            Action:
+              - 's3:GetObject'
+            Resource: !Sub 'arn:aws:s3:::${StaticAssetsBucket}/*'
+            
+  CloudFrontOriginAccessIdentity:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: 'CloudFrontOriginAccessIdentityConfig'
+
+  StaticAssetsDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        DefaultRootObject: 'index.html'
+        IPV6Enabled: true
+        HttpVersion: http2
+        Enabled: true
+        PriceClass: 'PriceClass_100'
+        ViewerCertificate: 
+          CloudFrontDefaultCertificate: true
+        Origins:
+          - Id: !Sub 'S3-${StaticAssetsBucket}'
+            DomainName: !GetAtt StaticAssetsBucket.DomainName
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub 'origin-access-identity/cloudfront/${CloudFrontOriginAccessIdentity}'
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          CachedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          Compress: true
+          DefaultTTL: 3600 # in seconds
+          ForwardedValues:
+            Cookies:
+              Forward: none
+            QueryString: false
+          TargetOriginId: !Sub 'S3-${StaticAssetsBucket}'
+          ViewerProtocolPolicy: 'redirect-to-https'
 
 Outputs:
   ApiId:
@@ -304,3 +365,11 @@ Outputs:
   FilesBucket:
     Description: 'Files Bucket Id'
     Value: !Ref FilesBucket
+  
+  StaticAssetsBucket:
+    Description: 'Static Assets Bucket Id'
+    Value: !Ref StaticAssetsBucket
+  
+  StaticAssetsDistribution:
+    Description: 'Static Assets Url'
+    Value: !Sub 'https://${StaticAssetsDistribution.DomainName}'

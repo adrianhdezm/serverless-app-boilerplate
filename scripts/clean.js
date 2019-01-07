@@ -7,7 +7,7 @@ const {
 	getProjectName,
 	getBucketName,
 	checkBucketExists,
-	getFilesBucketName,
+	getStackBucketName,
 	checkStackExists
 } = require('../config/utils');
 
@@ -26,14 +26,22 @@ const {
 		const stackName = getProjectName();
 		const stackExists = await checkStackExists(stackName);
 		if (stackExists) {
-			const filesBucketName = await getFilesBucketName(stackName);
-			console.log(filesBucketName)
+			const filesBucketName = await getStackBucketName(stackName, 'FilesBucket');
 			const filesBucketNameExists = await checkBucketExists(filesBucketName);
 			if (filesBucketNameExists) {
 				console.log(
 					chalk.yellow('\nDeleting the files bucket ...'.toUpperCase())
 				);
 				await exec(`aws s3 rb s3://${filesBucketName} --force`);
+			}
+		
+			const staticAssetsBucketName = await getStackBucketName(stackName, 'StaticAssetsBucket');
+			const staticAssetsBucketNameExists = await checkBucketExists(staticAssetsBucketName);
+			if (staticAssetsBucketNameExists) {
+				console.log(
+					chalk.yellow('\nDeleting the static assets bucket ...'.toUpperCase())
+				);
+				await exec(`aws s3 rb s3://${staticAssetsBucketName} --force`);
 			}
 				
 			console.log(chalk.yellow('\nDeleting the stack ...'.toUpperCase()));
