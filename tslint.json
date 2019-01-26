@@ -4,11 +4,12 @@
 	"jsRules": {},
 	"rules": {
 		"quotemark": [true, "single"],
-		"indent": [true, "tabs", 1],
+		"indent": [true, "tabs", 2],
 		"member-access": [true, "no-public"],
-		"trailing-comma": ["never", { "esSpecCompliant": true }],
+		"trailing-comma": [true, { "multiline": "never", "singleline": "never", "esSpecCompliant": true }],
 		"no-implicit-dependencies": [true, "dev"],
-		"curly": [true, "as-needed"]
+		"curly": [true, "as-needed"],
+		"no-console": [false]
 	},
 	"rulesDirectory": [],
 	"linterOptions": {

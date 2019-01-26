@@ -2,7 +2,10 @@ import { DynamoDB } from 'aws-sdk';
 import { randomBytes } from 'crypto';
 import { getSchema } from '../utils/validators';
 
-const dynamo = new DynamoDB.DocumentClient();
+const options: { [key: string]: string } = {};
+if (process.env.AWS_SAM_LOCAL) options.endpoint = 'http://dynamodb:8000';
+
+const dynamo = new DynamoDB.DocumentClient(options);
 const tableName = process.env.TABLE_NAME || '';
 
 export async function getAllObjects(className: string) {
