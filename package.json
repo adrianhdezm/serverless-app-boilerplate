@@ -10,7 +10,7 @@
 		"clean": "scripts/clean.js",
 		"package": "npm run clean && npm run build && scripts/package.js",
 		"deploy": "npm run package && scripts/deploy.js",
-		"test-api": "sam local start-api -t aws-sam/build/template.yaml"
+		"test-api": "npm run build && scripts/test-api.js"
 	},
 	"repository": {
 		"type": "git",
